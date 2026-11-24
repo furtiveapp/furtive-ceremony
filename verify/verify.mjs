@@ -18,6 +18,9 @@ import * as snarkjs from 'snarkjs'
 const URL_ = process.env.CEREMONY_URL
 const KEY = process.env.VERIFIER_KEY
 const PUBLISH = !process.argv.includes('--no-publish')
+// --watch: keep checking every few seconds while the ceremony is open (one run lasts up to ~5.5 hours)
+const WATCH = process.argv.includes('--watch')
+const STOP_AT = Date.now() + 330 * 60_000
 const R1CS = 'circuit/transact.r1cs'
 const PTAU = 'ptau/ppot_0080_16.ptau'
 if (!URL_ || !KEY) throw new Error('set CEREMONY_URL and VERIFIER_KEY')
@@ -43,11 +46,16 @@ async function verdict(body) {
   if (!r.ok) throw new Error(`verdict failed: ${r.status} ${await r.text()}`)
 }
 
-for (let round = 0; round < 20; round++) {
+for (;;) {
   const res = await fetch(`${URL_}/pending`, { headers: auth })
   if (res.status === 204) {
-    console.log('nothing waiting')
-    break
+    const open = WATCH && Date.now() < STOP_AT && (await (await fetch(`${URL_}/state`)).json()).status === 'open'
+    if (!open) {
+      console.log('nothing waiting')
+      break
+    }
+    await new Promise((r) => setTimeout(r, 8000))
+    continue
   }
   if (!res.ok) throw new Error(`pending: ${res.status}`)
   const n = Number(res.headers.get('x-n'))
@@ -85,6 +93,7 @@ for (let round = 0; round < 20; round++) {
     if (!readFileSync('TRANSCRIPT.md', 'utf8').includes(`| ${n} |`)) appendFileSync('TRANSCRIPT.md', `| ${n} | ${safe} | \`${hash}\` | ${new Date().toISOString().slice(0, 16).replace('T', ' ')} |\n`)
     sh('git', ['add', 'TRANSCRIPT.md'])
     sh('git', ['commit', '-m', `Contribution #${n} verified`])
+    sh('git', ['pull', '--rebase', '-q'])
     sh('git', ['push'])
   }
   await verdict({ n, ok: true, hash })

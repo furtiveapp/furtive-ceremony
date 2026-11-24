@@ -5,7 +5,8 @@ on:
     types: [contribution]
   workflow_dispatch:
   schedule:
-    - cron: '*/10 * * * *'
+    # a new watcher queues every 30 minutes; only one runs at a time, so one is always on duty
+    - cron: '*/30 * * * *'
 
 concurrency:
   group: verify
@@ -17,7 +18,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -50,4 +51,4 @@ jobs:
         run: |
           git config user.name "Furtive"
           git config user.email "noreply@furtive.app"
-          node verify/verify.mjs
+          node verify/verify.mjs --watch

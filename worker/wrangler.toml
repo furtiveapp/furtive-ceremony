@@ -1,6 +1,6 @@
 # The Furtive setup ceremony coordinator (free plan: one Worker + one SQLite Durable Object).
 # Deploy: npx wrangler deploy
-# Secrets (set by the team, never in this file): VERIFIER_KEY, and optionally GH_TOKEN.
+# Secrets (set by the team, never in this file): VERIFIER_KEY.
 name = "furtive-ceremony"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
