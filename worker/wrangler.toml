@@ -1,0 +1,23 @@
+# The Furtive setup ceremony coordinator (free plan: one Worker + one SQLite Durable Object).
+# Deploy: npx wrangler deploy
+# Secrets (set by the team, never in this file): VERIFIER_KEY, and optionally GH_TOKEN.
+name = "furtive-ceremony"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+account_id = "b20cdf8618a18ec1170df29f969b85f1"
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+GH_REPO = "furtiveapp/furtive-ceremony"
+ALLOWED_ORIGINS = "https://furtive.app,https://www.furtive.app,http://127.0.0.1:8788,http://localhost:8788"
+
+[[durable_objects.bindings]]
+name = "CEREMONY"
+class_name = "Ceremony"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Ceremony"]

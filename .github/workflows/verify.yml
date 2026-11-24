@@ -1,0 +1,53 @@
+name: Verify contributions
+
+on:
+  repository_dispatch:
+    types: [contribution]
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
+
+concurrency:
+  group: verify
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      # Phase 1: the public Perpetual Powers of Tau (80 contributions), checked by its fingerprint.
+      - uses: actions/cache@v4
+        with:
+          path: ptau
+          key: ppot_0080_16
+
+      - name: Phase 1 file
+        run: |
+          mkdir -p ptau
+          test -f ptau/ppot_0080_16.ptau || curl -sSfL -o ptau/ppot_0080_16.ptau https://pse-trusted-setup-ppot.s3.eu-central-1.amazonaws.com/pot28_0080/ppot_0080_16.ptau
+          echo "ed3622a7c79b0b49aadd134ebbc5b77df8c8c59bccebdfd0d9bf2c1a51561cf9  ptau/ppot_0080_16.ptau" | sha256sum -c
+
+      - name: Circuit file
+        run: echo "d5ff1393a7f7ca025c67d839891de31ac4e3c7de808ea110fdfcc2f0eabe074e  circuit/transact.r1cs" | sha256sum -c
+
+      - name: Verify
+        env:
+          CEREMONY_URL: https://furtive-ceremony.furtivehq.workers.dev
+          VERIFIER_KEY: ${{ secrets.VERIFIER_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "Furtive"
+          git config user.email "noreply@furtive.app"
+          node verify/verify.mjs
